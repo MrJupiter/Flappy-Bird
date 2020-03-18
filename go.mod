@@ -1,4 +1,4 @@
-module github.com/MrJupiter/flappy_bird
+module github.com/MrJupiter/Flappy-Bird
 
 go 1.13
 

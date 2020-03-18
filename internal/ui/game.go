@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"github.com/MrJupiter/flappy_bird/internal/items"
+	"github.com/MrJupiter/Flappy-Bird/internal/items"
 	"github.com/Tarliton/collision2d"
 	"github.com/hajimehoshi/ebiten"
 	"github.com/hajimehoshi/ebiten/audio"
@@ -99,7 +99,7 @@ func (game *Game) Update(screen *ebiten.Image) error {
 	if game.checkPipesCollision() {
 		screen.DrawImage(gameOver.Img, gameOver.GetDrawOptions(screen))
 		counter++
-		if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			game.Pipes = game.Pipes[1:]
 			pipe := new(items.Pipe)
 			pipe.Initialize(game.Bird.FlappyBox.H)

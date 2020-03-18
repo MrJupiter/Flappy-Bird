@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/MrJupiter/flappy_bird/internal/ui"
+	"github.com/MrJupiter/Flappy-Bird/internal/ui"
 	"github.com/hajimehoshi/ebiten"
 	_ "image/png"
 	"log"

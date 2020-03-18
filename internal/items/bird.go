@@ -31,7 +31,7 @@ func (bird * Bird) Initialize(){
 }
 
 func (bird *Bird) Jump(){
-	if bird.Position.Y + bird.FlappyBox.Pos.Y> 0 {
+	if bird.FlappyBox.Pos.Y> 0 {
 		bird.Position.Y -= 6
 		bird.FlappyBox.Pos.Y -= 6
 	}
