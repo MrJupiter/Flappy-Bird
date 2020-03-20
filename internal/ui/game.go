@@ -165,6 +165,8 @@ func (game *Game) Update(screen *ebiten.Image) error {
 		return nil
 	}
 	screen.DrawImage(game.Background.Img, game.Background.GetDrawOptions())
+	defer screen.DrawImage(game.Floor.Img, game.Floor.GetDrawOptions())
+	defer text.Draw(screen, strconv.Itoa(game.Score), fontsScore, 10,30, color.Black)
 	game.checkGameOverTrigger()
 	if checkBirdFloorCollision || checkBirdPipeCollision {
 		screen.DrawImage(game.GameOver.Img, game.GameOver.GetDrawOptions(game.WindowsDimensions.Width, game.WindowsDimensions.Height))
@@ -212,10 +214,6 @@ func (game *Game) Update(screen *ebiten.Image) error {
 			}
 		}
 	}
-
-	screen.DrawImage(game.Floor.Img, game.Floor.GetDrawOptions())
-
-	text.Draw(screen, strconv.Itoa(game.Score), fontsScore, 10,30, color.Black)
 
 	return nil
 }
