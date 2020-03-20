@@ -11,7 +11,7 @@ func main() {
 	game := new(ui.Game)
 	game.Initialize()
 
-	if err := ebiten.Run(game.Update, 1024, 768, 1, "Flappy Bird"); err != nil {
+	if err := ebiten.Run(game.Update, game.WindowsDimensions.Width, game.WindowsDimensions.Height, 1, "Flappy Bird"); err != nil {
 		log.Fatal(err)
 	}
 }

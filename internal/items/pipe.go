@@ -6,9 +6,7 @@ import (
 	"github.com/hajimehoshi/ebiten/ebitenutil"
 	"log"
 	"math/rand"
-	"time"
 )
-
 
 type pipePart struct{
 	Position collision2d.Vector
@@ -20,15 +18,20 @@ type pipePart struct{
 type Pipe struct {
 	DownPipe pipePart
 	UpperPipe pipePart
-	PipeImgScale float64
-	GapWidth float64
-	Unused bool
+	GapBox collision2d.Box
+	Undisplayed bool
+	PipeImgScale collision2d.Vector
+	Passed bool
 }
 
-func initializePipePart(position collision2d.Vector, PipeHeadBox collision2d.Box, PipeBodyBox collision2d.Box, imgPath string) (pipePart pipePart){
+func randFloat(min, max float64) float64{
+	return min + rand.Float64() * (max - min)
+}
+
+func initializePipePart(position collision2d.Vector, PipeBodyBox collision2d.Box, PipeHeadBox collision2d.Box, imgPath string) (pipePart pipePart){
 	pipePart.Position = position
-	pipePart.PipeHeadBox = PipeHeadBox
 	pipePart.PipeBodyBox = PipeBodyBox
+	pipePart.PipeHeadBox = PipeHeadBox
 
 	var err error
 	pipePart.Img,_, err = ebitenutil.NewImageFromFile(imgPath, ebiten.FilterDefault)
@@ -38,42 +41,45 @@ func initializePipePart(position collision2d.Vector, PipeHeadBox collision2d.Box
 	return
 }
 
-func (pipe * Pipe) initializeUpperPipe(){
-	position := collision2d.Vector{X: 500, Y: 0}
-		pipe.UpperPipe = initializePipePart(
-			position,
-			collision2d.Box{
-				Pos: collision2d.Vector{X: position.X + 0 * pipe.PipeImgScale, Y: position.Y + 775 * pipe.PipeImgScale},
-				W:   (215 - 0) * pipe.PipeImgScale,
-				H:   (852 - 775) * pipe.PipeImgScale,
-			},
-			collision2d.Box{
-				Pos: collision2d.Vector{X: position.X + 31 * pipe.PipeImgScale, Y: position.Y + 0 * pipe.PipeImgScale},
-				W:   (185 - 31) * pipe.PipeImgScale,
-				H:   (775 - 0) * pipe.PipeImgScale,
-			},
-			"resources/img/upperPipe.png",
-		)
+func (pipe * Pipe) initializeUpperPipe(pipeStartMinPositionX float64){
+	pipeStartPositionX := randFloat(pipeStartMinPositionX+60, pipeStartMinPositionX + 320)
+
+	randomY := randFloat(-150,5)
+	position := collision2d.Vector{X: pipeStartPositionX, Y: randomY}
+	pipe.UpperPipe = initializePipePart(
+		position,
+		collision2d.Box{
+			Pos: collision2d.Vector{X: position.X + 31 * pipe.PipeImgScale.X, Y: position.Y + 0 * pipe.PipeImgScale.Y},
+			W:   (185 - 31) * pipe.PipeImgScale.X,
+			H:   (775 - 0) * pipe.PipeImgScale.Y,
+		},
+		collision2d.Box{
+			Pos: collision2d.Vector{X: position.X + 0 * pipe.PipeImgScale.X, Y: position.Y + 775 * pipe.PipeImgScale.Y},
+			W:   (215 - 0) * pipe.PipeImgScale.X,
+			H:   (852 - 775) * pipe.PipeImgScale.Y,
+		},
+		"resources/img/upperPipe.png",
+	)
 	return
 }
 
 func (pipe * Pipe) initializeDownPipe() {
 	position := collision2d.Vector{
 		X: pipe.UpperPipe.Position.X,
-		Y: pipe.GapWidth,
+		Y: pipe.GapBox.H + pipe.GapBox.Pos.Y,
 	}
 
 	pipe.DownPipe = initializePipePart(
 		position,
 		collision2d.Box{
-			Pos: collision2d.Vector{X: position.X + 0 * pipe.PipeImgScale, Y: position.Y + 0 * pipe.PipeImgScale},
-			W:   215 * pipe.PipeImgScale,
-			H:   78 * pipe.PipeImgScale,
+			Pos: collision2d.Vector{X: position.X + 32 * pipe.PipeImgScale.X, Y: position.Y + 78 * pipe.PipeImgScale.Y},
+			W:   (185 - 32) * pipe.PipeImgScale.X,
+			H:   (852 - 78) * pipe.PipeImgScale.Y,
 		},
 		collision2d.Box{
-			Pos: collision2d.Vector{X: position.X + 32 * pipe.PipeImgScale, Y: position.Y + 78 * pipe.PipeImgScale},
-			W:   (185 - 32) * pipe.PipeImgScale,
-			H:   (852 - 78) * pipe.PipeImgScale,
+			Pos: collision2d.Vector{X: position.X + 0 * pipe.PipeImgScale.X, Y: position.Y + 0 * pipe.PipeImgScale.Y},
+			W:   215 * pipe.PipeImgScale.X,
+			H:   78 * pipe.PipeImgScale.Y,
 		},
 		"resources/img/downPipe.png",
 	)
@@ -81,48 +87,52 @@ func (pipe * Pipe) initializeDownPipe() {
 	return
 }
 
-func (pipe * Pipe) Initialize(birdSize float64){
-	rand.Seed(time.Now().UnixNano())
+func (pipe * Pipe) Initialize(birdImgSize float64, pipeStartPositionX float64){
+	pipe.Undisplayed = false
+	pipe.Passed = false
+	pipe.PipeImgScale = collision2d.Vector{
+		X: 0.5,
+		Y: 0.5,
+	}
+	pipe.initializeUpperPipe(pipeStartPositionX)
 
-	pipe.Unused = false
+	min := birdImgSize
+	gapHeight := randFloat(min, min + 50)
 
-	pipe.PipeImgScale = 0.5
-	pipe.initializeUpperPipe()
-
-	tolerance := 40
-	min := int(pipe.UpperPipe.Position.Y +  pipe.UpperPipe.PipeBodyBox.H + pipe.UpperPipe.PipeHeadBox.H) + int(birdSize) + tolerance
-	max := min + 60
-
-	pipe.GapWidth = float64(rand.Intn(max-min+1) + min)
+	pipe.GapBox = collision2d.Box{
+		Pos: collision2d.Vector{X: pipe.UpperPipe.PipeHeadBox.Pos.X, Y: pipe.UpperPipe.Position.Y +  pipe.UpperPipe.PipeBodyBox.H + pipe.UpperPipe.PipeHeadBox.H },
+		W:   pipe.UpperPipe.PipeHeadBox.W,
+		H:   gapHeight,
+	}
 
 	pipe.initializeDownPipe()
 
 	return
 }
 
-
 func (pipe * Pipe) Play(){
-	pipe.UpperPipe.Position.X -= 1.8
-	pipe.UpperPipe.PipeBodyBox.Pos.X -= 1.8
-	pipe.UpperPipe.PipeHeadBox.Pos.X -= 1.8
+	pipe.UpperPipe.Position.X -= 2
+	pipe.UpperPipe.PipeBodyBox.Pos.X -= 2
+	pipe.UpperPipe.PipeHeadBox.Pos.X -= 2
 
-	pipe.DownPipe.Position.X -= 1.8
-	pipe.DownPipe.PipeBodyBox.Pos.X -= 1.8
-	pipe.DownPipe.PipeHeadBox.Pos.X -= 1.8
+	pipe.GapBox.Pos.X -= 2
+
+	pipe.DownPipe.Position.X -= 2
+	pipe.DownPipe.PipeBodyBox.Pos.X -= 2
+	pipe.DownPipe.PipeHeadBox.Pos.X -= 2
 
 	if pipe.UpperPipe.PipeHeadBox.Pos.X + pipe.UpperPipe.PipeHeadBox.W < 0 {
-		pipe.Unused = true
+		pipe.Undisplayed = true
 	}
-
 }
 
 func (pipe * Pipe) Draw(screen *ebiten.Image) {
 	opUpperPipe := &ebiten.DrawImageOptions{}
-	opUpperPipe.GeoM.Scale(pipe.PipeImgScale, pipe.PipeImgScale)
+	opUpperPipe.GeoM.Scale(pipe.PipeImgScale.X, pipe.PipeImgScale.Y)
 	opUpperPipe.GeoM.Translate(pipe.UpperPipe.Position.X, pipe.UpperPipe.Position.Y)
 
 	opDownPipe := &ebiten.DrawImageOptions{}
-	opDownPipe.GeoM.Scale(pipe.PipeImgScale, pipe.PipeImgScale)
+	opDownPipe.GeoM.Scale(pipe.PipeImgScale.X, pipe.PipeImgScale.Y)
 	opDownPipe.GeoM.Translate(pipe.DownPipe.Position.X, pipe.DownPipe.Position.Y)
 
 	screen.DrawImage(pipe.UpperPipe.Img, opUpperPipe)

@@ -30,6 +30,13 @@ func (bird * Bird) Initialize(){
 	return
 }
 
+func (bird *Bird) GetDrawOptions() *ebiten.DrawImageOptions{
+	opBird := &ebiten.DrawImageOptions{}
+	opBird.GeoM.Scale(bird.ImgScale, bird.ImgScale)
+	opBird.GeoM.Translate(bird.Position.X, bird.Position.Y)
+	return opBird
+}
+
 func (bird *Bird) Jump(){
 	if bird.FlappyBox.Pos.Y> 0 {
 		bird.Position.Y -= 6

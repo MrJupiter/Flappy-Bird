@@ -1,4 +1,4 @@
-package items
+package components
 
 import (
 	"github.com/Tarliton/collision2d"

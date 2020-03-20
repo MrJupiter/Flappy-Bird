@@ -1,4 +1,4 @@
-package items
+package components
 
 import (
 	"github.com/hajimehoshi/ebiten"
@@ -18,10 +18,9 @@ func (gameOver *GameOver) Initialize(){
 	}
 }
 
-func (gameOver *GameOver) GetDrawOptions(screen *ebiten.Image) *ebiten.DrawImageOptions{
+func (gameOver *GameOver) GetDrawOptions(screenWidth, screenHeight int) *ebiten.DrawImageOptions{
 	opGameOver := &ebiten.DrawImageOptions{}
 	gameOverImgWidth, gameOverImgHeight := gameOver.Img.Size()
-	screenWidth, screenHeight := screen.Size()
 	opGameOver.GeoM.Translate(float64(screenWidth)/2 - float64(gameOverImgWidth)/2 , float64(screenHeight)/2 - float64(gameOverImgHeight)/2)
 
 	return opGameOver
