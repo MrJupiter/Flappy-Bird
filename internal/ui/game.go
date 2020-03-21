@@ -22,13 +22,13 @@ import (
 
 
 type Game struct{
-	Background *components.Background
-	Floor * components.Floor
+	Background components.Background
+	Floor components.Floor
 	Bird *items.Bird
 	Pipes[] *items.Pipe
 	Score int
-	WindowsDimensions dimension
-	GameOver *components.GameOver
+	WindowDimensions dimension
+	GameOver components.GameOver
 }
 
 type dimension struct {
@@ -36,7 +36,6 @@ type dimension struct {
 }
 
 var (
-	checkBirdFloorCollision, checkBirdPipeCollision bool
 	fontsScore font.Face
 	audioContext *audio.Context
 	gameAudioPlayer  *audio.Player
@@ -69,7 +68,7 @@ func (game *Game) drawPipes(screen *ebiten.Image){
 }
 
 
-func (game *Game) getAudioPlayer(audioPath string) *audio.Player{
+func getAudioPlayer(audioPath string) *audio.Player{
 	f, err := os.Open(audioPath)
 	if err != nil {
 		log.Fatal(err)
@@ -86,7 +85,7 @@ func (game *Game) getAudioPlayer(audioPath string) *audio.Player{
 }
 
 
-func (game *Game) initializeAudioContext(){
+func initializeAudioContext(){
 	if audioContext == nil{
 		var err error
 		audioContext, err = audio.NewContext(44100)
@@ -94,49 +93,50 @@ func (game *Game) initializeAudioContext(){
 			log.Fatal(err)
 		}
 	}
-	gameAudioPlayer = game.getAudioPlayer("resources/audio/gameMusic.wav")
+	gameAudioPlayer = getAudioPlayer("resources/audio/gameMusic.wav")
 }
 
-func (game *Game) Initialize(){
-	game.initializeAudioContext()
+func initializeFont(){
 	tt, err := truetype.Parse(fonts.MPlus1pRegular_ttf)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fontsScore =  truetype.NewFace(tt, &truetype.Options{
-			Size:    24,
-			DPI:     72,
-			Hinting: font.HintingFull,
-		})
+		Size:    24,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+}
 
-	game.WindowsDimensions = dimension{Width: 1024, Height: 768}
+func (game *Game) Initialize(){
+	initializeAudioContext()
+	initializeFont()
+
+	game.WindowDimensions = dimension{Width: 1024, Height: 768}
 	game.Score = 0
 
-	game.Background = new(components.Background)
 	game.Background.Initialize()
-
-	game.Floor = new(components.Floor)
 	game.Floor.Initialize()
+	game.GameOver.Initialize()
 
 	game.Bird = new(items.Bird)
 	game.Bird.Initialize()
 
 	game.createPipes(pipesNumber)
 
-	game.GameOver = new(components.GameOver)
-	game.GameOver.Initialize()
 	return
 }
 
-func (game *Game) checkGameOverTrigger() {
+func (game *Game) checkGameOverTrigger() bool {
 	checkUpperPipeBodyBox, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[0].UpperPipe.PipeBodyBox.ToPolygon())
 	checkUpperPipeHeadBox, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[0].UpperPipe.PipeHeadBox.ToPolygon())
 	checkDownPipeBodyBox, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[0].DownPipe.PipeBodyBox.ToPolygon())
 	checkDownPipeHeadBox, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[0].DownPipe.PipeHeadBox.ToPolygon())
 
-	checkBirdPipeCollision = checkUpperPipeBodyBox || checkUpperPipeHeadBox || checkDownPipeBodyBox || checkDownPipeHeadBox
-	checkBirdFloorCollision, _ = collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Floor.FloorBox.ToPolygon())
+	checkBirdPipeCollision := checkUpperPipeBodyBox || checkUpperPipeHeadBox || checkDownPipeBodyBox || checkDownPipeHeadBox
+	checkBirdFloorCollision, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Floor.FloorBox.ToPolygon())
+	return checkBirdPipeCollision || checkBirdFloorCollision
 }
 
 func (game *Game) incrementScore() {
@@ -153,13 +153,13 @@ func (game *Game) incrementScore() {
 }
 
 func (game *Game) Update(screen *ebiten.Image) error {
+	rand.Seed(time.Now().UnixNano())
+
 	if !gameAudioPlayer.IsPlaying(){
 		gameAudioPlayer.SetVolume(0.2)
 		gameAudioPlayer.Rewind()
 		gameAudioPlayer.Play()
 	}
-
-	rand.Seed(time.Now().UnixNano())
 
 	if ebiten.IsDrawingSkipped() {
 		return nil
@@ -167,22 +167,18 @@ func (game *Game) Update(screen *ebiten.Image) error {
 	screen.DrawImage(game.Background.Img, game.Background.GetDrawOptions())
 	defer screen.DrawImage(game.Floor.Img, game.Floor.GetDrawOptions())
 	defer text.Draw(screen, strconv.Itoa(game.Score), fontsScore, 10,30, color.Black)
-	game.checkGameOverTrigger()
-	if checkBirdFloorCollision || checkBirdPipeCollision {
-		screen.DrawImage(game.GameOver.Img, game.GameOver.GetDrawOptions(game.WindowsDimensions.Width, game.WindowsDimensions.Height))
+
+	if game.checkGameOverTrigger() {
+		screen.DrawImage(game.GameOver.Img, game.GameOver.GetDrawOptions(game.WindowDimensions.Width, game.WindowDimensions.Height))
 
 		if hitGameOverSound {
-			hitAudioPlayer := game.getAudioPlayer("resources/audio/hit.wav")
-			if !hitAudioPlayer.IsPlaying(){
-				hitAudioPlayer.SetVolume(0.1)
-				hitAudioPlayer.Rewind()
-				hitAudioPlayer.Play()
-			}
+			hitAudioPlayer := getAudioPlayer("resources/audio/hit.wav")
+			hitAudioPlayer.SetVolume(0.1)
+			hitAudioPlayer.Play()
 			hitGameOverSound = false
 		}
 
 		if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-			checkBirdFloorCollision = false
 			hitGameOverSound = true
 			game.Score = 0
 			game.Pipes = nil
@@ -206,12 +202,9 @@ func (game *Game) Update(screen *ebiten.Image) error {
 		game.Bird.Play()
 		if ebiten.IsKeyPressed(ebiten.KeyUp) {
 			game.Bird.Jump()
-			jumpAudioPlayer := game.getAudioPlayer("resources/audio/jump.wav")
-			if !jumpAudioPlayer.IsPlaying(){
-				jumpAudioPlayer.SetVolume(0.1)
-				jumpAudioPlayer.Rewind()
-				jumpAudioPlayer.Play()
-			}
+			jumpAudioPlayer := getAudioPlayer("resources/audio/jump.wav")
+			jumpAudioPlayer.SetVolume(0.1)
+			jumpAudioPlayer.Play()
 		}
 	}
 
