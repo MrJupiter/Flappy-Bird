@@ -40,6 +40,7 @@ var (
 	audioContext *audio.Context
 	gameAudioPlayer  *audio.Player
 	hitGameOverSound = true
+	startGame bool
 )
 
 const (
@@ -177,6 +178,7 @@ func (game *Game) Update(screen *ebiten.Image) error {
 			hitAudioPlayer.Play()
 			hitGameOverSound = false
 		}
+		startGame = false
 
 		if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			hitGameOverSound = true
@@ -188,7 +190,6 @@ func (game *Game) Update(screen *ebiten.Image) error {
 	}else{
 		screen.DrawImage(game.Bird.Img, game.Bird.GetDrawOptions())
 
-		game.drawPipes(screen)
 		if game.Pipes[0].Undisplayed == true {
 			game.Pipes = game.Pipes[1:]
 			pipeLoop := new(items.Pipe)
@@ -197,14 +198,21 @@ func (game *Game) Update(screen *ebiten.Image) error {
 			game.Pipes = append(game.Pipes, pipeLoop)
 		}
 
-		game.incrementScore()
+		if ebiten.IsKeyPressed(ebiten.KeyEnter) {
+			startGame = true
+		}
 
-		game.Bird.Play()
-		if ebiten.IsKeyPressed(ebiten.KeyUp) {
-			game.Bird.Jump()
-			jumpAudioPlayer := getAudioPlayer("resources/audio/jump.wav")
-			jumpAudioPlayer.SetVolume(0.1)
-			jumpAudioPlayer.Play()
+		if startGame {
+			game.incrementScore()
+			game.Bird.Play()
+			game.drawPipes(screen)
+
+			if ebiten.IsKeyPressed(ebiten.KeyUp) {
+				game.Bird.Jump()
+				jumpAudioPlayer := getAudioPlayer("resources/audio/jump.wav")
+				jumpAudioPlayer.SetVolume(0.1)
+				jumpAudioPlayer.Play()
+			}
 		}
 	}
 
