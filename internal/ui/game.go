@@ -1,9 +1,9 @@
 package ui
 
 import (
-	"fmt"
 	"github.com/MrJupiter/Flappy-Bird/internal/items"
 	"github.com/MrJupiter/Flappy-Bird/internal/ui/components"
+	"github.com/MrJupiter/Flappy-Bird/resources/fonts"
 	"github.com/Tarliton/collision2d"
 	"github.com/golang/freetype"
 	"github.com/golang/freetype/truetype"
@@ -13,7 +13,6 @@ import (
 	"github.com/hajimehoshi/ebiten/text"
 	"golang.org/x/image/font"
 	"image/color"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -100,13 +99,7 @@ func initializeAudioContext(){
 }
 
 func initializeFont(){
-	fontBytes, err := ioutil.ReadFile("resources/fonts/scoreFont.TTF")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	tt, err := freetype.ParseFont(fontBytes)
+	tt, err := freetype.ParseFont(fonts.GetFont())
 	if err != nil {
 		log.Fatal(err)
 	}
