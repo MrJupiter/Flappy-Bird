@@ -1,17 +1,19 @@
 package ui
 
 import (
+	"fmt"
 	"github.com/MrJupiter/Flappy-Bird/internal/items"
 	"github.com/MrJupiter/Flappy-Bird/internal/ui/components"
 	"github.com/Tarliton/collision2d"
+	"github.com/golang/freetype"
 	"github.com/golang/freetype/truetype"
 	"github.com/hajimehoshi/ebiten"
 	"github.com/hajimehoshi/ebiten/audio"
 	"github.com/hajimehoshi/ebiten/audio/wav"
 	"github.com/hajimehoshi/ebiten/text"
-	"gitlab.com/smartballs/driver/assets/fonts"
 	"golang.org/x/image/font"
 	"image/color"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -98,13 +100,19 @@ func initializeAudioContext(){
 }
 
 func initializeFont(){
-	tt, err := truetype.Parse(fonts.MPlus1pRegular_ttf)
+	fontBytes, err := ioutil.ReadFile("resources/fonts/scoreFont.TTF")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	tt, err := freetype.ParseFont(fontBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fontsScore =  truetype.NewFace(tt, &truetype.Options{
-		Size:    24,
+		Size:    34,
 		DPI:     72,
 		Hinting: font.HintingFull,
 	})
@@ -167,7 +175,7 @@ func (game *Game) Update(screen *ebiten.Image) error {
 	}
 	screen.DrawImage(game.Background.Img, game.Background.GetDrawOptions())
 	defer screen.DrawImage(game.Floor.Img, game.Floor.GetDrawOptions())
-	defer text.Draw(screen, strconv.Itoa(game.Score), fontsScore, 10,30, color.Black)
+	defer text.Draw(screen, strconv.Itoa(game.Score), fontsScore, 15,40, color.White)
 
 	if game.checkGameOverTrigger() {
 		screen.DrawImage(game.GameOver.Img, game.GameOver.GetDrawOptions(game.WindowDimensions.Width, game.WindowDimensions.Height))
