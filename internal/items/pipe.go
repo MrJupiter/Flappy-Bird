@@ -22,6 +22,7 @@ type Pipe struct {
 	Undisplayed bool
 	PipeImgScale collision2d.Vector
 	Passed bool
+	Ignored bool
 }
 
 func randFloat(min, max float64) float64{

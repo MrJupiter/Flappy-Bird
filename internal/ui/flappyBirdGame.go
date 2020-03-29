@@ -20,14 +20,12 @@ import (
 	"time"
 )
 
-
-
-type Game struct{
+type FlappyBirdGame struct{
 	Background components.Background
 	Floor components.Floor
 	Bird *items.Bird
 	Pipes[] *items.Pipe
-	Score int
+	FlappyBirdScore int
 	WindowDimensions dimension
 	GameOver components.GameOver
 }
@@ -37,7 +35,7 @@ type dimension struct {
 }
 
 var (
-	fontsScore font.Face
+	fontsFlappyBirdScore font.Face
 	audioContext *audio.Context
 	gameAudioPlayer  *audio.Player
 	hitGameOverSound = true
@@ -48,7 +46,7 @@ const (
 	pipesNumber  = 8
 )
 
-func (game *Game) createPipes(number int) {
+func (game *FlappyBirdGame) createPipes(number int) {
 	pipe := new(items.Pipe)
 	birdImgHeight, _ := game.Bird.Img.Size()
 	pipe.Initialize(float64(birdImgHeight)*game.Bird.ImgScale, 1024)
@@ -62,7 +60,7 @@ func (game *Game) createPipes(number int) {
 	return
 }
 
-func (game *Game) drawPipes(screen *ebiten.Image){
+func (game *FlappyBirdGame) drawPipes(screen *ebiten.Image){
 	for i:=0; i<len(game.Pipes) ; i++ {
 		game.Pipes[i].Draw(screen)
 		game.Pipes[i].Play()
@@ -104,19 +102,19 @@ func initializeFont(){
 		log.Fatal(err)
 	}
 
-	fontsScore =  truetype.NewFace(tt, &truetype.Options{
+	fontsFlappyBirdScore =  truetype.NewFace(tt, &truetype.Options{
 		Size:    34,
 		DPI:     72,
 		Hinting: font.HintingFull,
 	})
 }
 
-func (game *Game) Initialize(){
+func (game *FlappyBirdGame) Initialize(){
 	initializeAudioContext()
 	initializeFont()
 
 	game.WindowDimensions = dimension{Width: 1024, Height: 768}
-	game.Score = 0
+	game.FlappyBirdScore = 0
 
 	game.Background.Initialize()
 	game.Floor.Initialize()
@@ -130,31 +128,43 @@ func (game *Game) Initialize(){
 	return
 }
 
-func (game *Game) checkGameOverTrigger() bool {
-	checkUpperPipeBodyBox, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[0].UpperPipe.PipeBodyBox.ToPolygon())
-	checkUpperPipeHeadBox, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[0].UpperPipe.PipeHeadBox.ToPolygon())
-	checkDownPipeBodyBox, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[0].DownPipe.PipeBodyBox.ToPolygon())
-	checkDownPipeHeadBox, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[0].DownPipe.PipeHeadBox.ToPolygon())
+func (game *FlappyBirdGame) checkGameOverTrigger() bool {
+	index := game.getIndexOfPipeThatMayCollide()
+	checkUpperPipeBodyBox, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[index].UpperPipe.PipeBodyBox.ToPolygon())
+	checkUpperPipeHeadBox, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[index].UpperPipe.PipeHeadBox.ToPolygon())
+	checkDownPipeBodyBox, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[index].DownPipe.PipeBodyBox.ToPolygon())
+	checkDownPipeHeadBox, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[index].DownPipe.PipeHeadBox.ToPolygon())
 
 	checkBirdPipeCollision := checkUpperPipeBodyBox || checkUpperPipeHeadBox || checkDownPipeBodyBox || checkDownPipeHeadBox
 	checkBirdFloorCollision, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Floor.FloorBox.ToPolygon())
 	return checkBirdPipeCollision || checkBirdFloorCollision
 }
 
-func (game *Game) incrementScore() {
+func (game *FlappyBirdGame) incrementFlappyBirdScore() {
 	for i:=0; i<len(game.Pipes); i++{
 		birdPassed, _ := collision2d.TestPolygonPolygon(game.Bird.FlappyBox.ToPolygon(), game.Pipes[i].GapBox.ToPolygon())
 		if birdPassed {
 			game.Pipes[i].Passed = birdPassed
 		}
 		if game.Pipes[i].Passed && game.Bird.FlappyBox.Pos.X > game.Pipes[i].UpperPipe.PipeHeadBox.Pos.X + game.Pipes[i].UpperPipe.PipeHeadBox.W {
-			game.Score++
-			game.Pipes[i].Passed = false
+			game.FlappyBirdScore++
+			game.Pipes[i].Ignored = true // used to compare collision between the bird and the nearest pipe (not bypassed yet)
+			game.Pipes[i].Passed = false // used to increment the score
 		}
 	}
 }
 
-func (game *Game) Update(screen *ebiten.Image) error {
+func (game *FlappyBirdGame) getIndexOfPipeThatMayCollide() int{
+	for i:=0; i<len(game.Pipes) ; i++ {
+		if !game.Pipes[i].Ignored {
+			return i
+		}
+	}
+	return 0
+}
+
+
+func (game *FlappyBirdGame) Update(screen *ebiten.Image) error {
 	rand.Seed(time.Now().UnixNano())
 
 	if !gameAudioPlayer.IsPlaying(){
@@ -168,7 +178,7 @@ func (game *Game) Update(screen *ebiten.Image) error {
 	}
 	screen.DrawImage(game.Background.Img, game.Background.GetDrawOptions())
 	defer screen.DrawImage(game.Floor.Img, game.Floor.GetDrawOptions())
-	defer text.Draw(screen, strconv.Itoa(game.Score), fontsScore, 15,40, color.White)
+	defer text.Draw(screen,  strconv.Itoa(game.FlappyBirdScore), fontsFlappyBirdScore, 15,40, color.White)
 
 	if game.checkGameOverTrigger() {
 		screen.DrawImage(game.GameOver.Img, game.GameOver.GetDrawOptions(game.WindowDimensions.Width, game.WindowDimensions.Height))
@@ -183,7 +193,7 @@ func (game *Game) Update(screen *ebiten.Image) error {
 
 		if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			hitGameOverSound = true
-			game.Score = 0
+			game.FlappyBirdScore = 0
 			game.Pipes = nil
 			game.Bird.Initialize()
 			game.createPipes(pipesNumber)
@@ -204,7 +214,7 @@ func (game *Game) Update(screen *ebiten.Image) error {
 		}
 
 		if startGame {
-			game.incrementScore()
+			game.incrementFlappyBirdScore()
 			game.Bird.Play()
 			game.drawPipes(screen)
 
