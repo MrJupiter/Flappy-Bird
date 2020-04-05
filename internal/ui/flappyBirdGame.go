@@ -36,6 +36,7 @@ type dimension struct {
 
 var (
 	fontsFlappyBirdScore font.Face
+	fontsFlappyBirdKeyController font.Face
 	audioContext *audio.Context
 	gameAudioPlayer  *audio.Player
 	hitGameOverSound = true
@@ -96,8 +97,8 @@ func initializeAudioContext(){
 	gameAudioPlayer = getAudioPlayer("resources/audio/gameMusic.wav")
 }
 
-func initializeFont(){
-	tt, err := freetype.ParseFont(fonts.GetFont())
+func initializeFonts(){
+	tt, err := freetype.ParseFont(fonts.GetScoreFont())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -107,11 +108,22 @@ func initializeFont(){
 		DPI:     72,
 		Hinting: font.HintingFull,
 	})
+
+	tt, err = freetype.ParseFont(fonts.GetKeyControllerFont())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fontsFlappyBirdKeyController =  truetype.NewFace(tt, &truetype.Options{
+		Size:    34,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
 }
 
 func (game *FlappyBirdGame) Initialize(){
 	initializeAudioContext()
-	initializeFont()
+	initializeFonts()
 
 	game.WindowDimensions = dimension{Width: 1024, Height: 768}
 	game.FlappyBirdScore = 0
@@ -180,8 +192,13 @@ func (game *FlappyBirdGame) Update(screen *ebiten.Image) error {
 	defer screen.DrawImage(game.Floor.Img, game.Floor.GetDrawOptions())
 	defer text.Draw(screen,  strconv.Itoa(game.FlappyBirdScore), fontsFlappyBirdScore, 15,40, color.White)
 
+	if !game.checkGameOverTrigger() && !startGame {
+		text.Draw(screen,  "Press key 'ENTER' to start the game", fontsFlappyBirdKeyController, game.WindowDimensions.Width/2 - 250, game.WindowDimensions.Height/2, color.Black)
+	}
+
 	if game.checkGameOverTrigger() {
 		screen.DrawImage(game.GameOver.Img, game.GameOver.GetDrawOptions(game.WindowDimensions.Width, game.WindowDimensions.Height))
+		text.Draw(screen,  "Click on the left mouse button or press the key 'R' to replay", fontsFlappyBirdKeyController, game.WindowDimensions.Width/2 - 410, game.WindowDimensions.Height/2 + 70, color.Black)
 
 		if hitGameOverSound {
 			hitAudioPlayer := getAudioPlayer("resources/audio/hit.wav")
@@ -191,7 +208,7 @@ func (game *FlappyBirdGame) Update(screen *ebiten.Image) error {
 		}
 		startGame = false
 
-		if ebiten.IsKeyPressed(ebiten.KeySpace) || ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		if ebiten.IsKeyPressed(ebiten.KeyR) || ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			hitGameOverSound = true
 			game.FlappyBirdScore = 0
 			game.Pipes = nil
